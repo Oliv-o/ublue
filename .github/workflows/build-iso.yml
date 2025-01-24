@@ -1,16 +1,9 @@
 ---
-name: Build Custom Image
+name: Build Custom ISO
 on:
-  pull_request:
-    branches:
-      - main
   schedule:
     - cron: '05 10 * * *'  # 10:05am UTC everyday
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '**/README.md'
+
   workflow_dispatch:
 
 env:
@@ -47,25 +40,3 @@ jobs:
           variant: ${{ env.VARIANT }}
           iso_name: ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}-${{ env.VERSION }}.iso
 
-      # This example is for uploading your ISO as a Github artifact. You can do something similar using any cloud storage, so long as you copy the output
-      - name: Upload ISO as artifact
-        id: upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.build.outputs.iso_name }}
-          path: |
-            ${{ steps.build.outputs.iso_path }}
-            ${{ steps.build.outputs.iso_path }}-CHECKSUM
-          if-no-files-found: error
-          retention-days: 0
-          compression-level: 0
-              if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-              run: |
-                IMAGE_FULL="${{ steps.registry_case.outputs.lowercase }}/${{ steps.image_case.outputs.lowercase }}"
-                for tag in ${{ steps.metadata.outputs.tags }}; do
-                  cosign sign -y --key env://COSIGN_PRIVATE_KEY $IMAGE_FULL:$tag
-                done
-              env:
-                TAGS: ${{ steps.push.outputs.digest }}
-                COSIGN_EXPERIMENTAL: false
-                COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
